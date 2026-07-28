@@ -81,17 +81,17 @@ class LocalRepository(Repository):
         return resolved_path.read_text(encoding=encoding)
 
     def _has_git_metadata(self) -> bool:
-        git_dir = self.root / ".git"
-        if git_dir.is_dir():
+        metadata_path = self.root / ".git"
+        if metadata_path.is_dir():
             return True
-        if git_dir.is_file():
+        if metadata_path.is_file():
             try:
-                contents = git_dir.read_text(encoding="utf-8").strip()
+                contents = metadata_path.read_text(encoding="utf-8").strip()
             except OSError:
                 return False
             if contents.lower().startswith("gitdir:"):
                 git_path = contents.split(":", maxsplit=1)[1].strip()
-                candidate = (git_dir.parent / git_path).resolve()
+                candidate = (metadata_path.parent / git_path).resolve()
                 return candidate.exists()
         return False
 

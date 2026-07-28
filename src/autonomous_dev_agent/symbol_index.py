@@ -35,6 +35,7 @@ class PythonSymbol:
     path: Path
     line: int
     end_line: int
+    source_start_line: int | None = None
     decorators: tuple[str, ...] = ()
     docstring: str | None = None
     bases: tuple[str, ...] = ()
@@ -60,7 +61,7 @@ class SymbolIndex:
         matches = [
             symbol
             for symbol in self._by_path.get(normalized_path, ())
-            if symbol.line <= line <= symbol.end_line
+            if (symbol.source_start_line or symbol.line) <= line <= symbol.end_line
         ]
         return tuple(sorted(matches, key=lambda symbol: (symbol.line, symbol.end_line, symbol.kind, symbol.name)))
 

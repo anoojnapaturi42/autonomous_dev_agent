@@ -150,6 +150,7 @@ class _AstCollector:
                 path=self._path,
                 line=node.lineno,
                 end_line=_end_line(node),
+                source_start_line=_source_start_line(node),
                 decorators=tuple(_decorator_name(decorator) for decorator in node.decorator_list),
                 docstring=ast.get_docstring(node),
                 bases=tuple(_expression_name(base) for base in node.bases),
@@ -173,6 +174,7 @@ class _AstCollector:
                 path=self._path,
                 line=node.lineno,
                 end_line=_end_line(node),
+                source_start_line=_source_start_line(node),
                 decorators=tuple(_decorator_name(decorator) for decorator in node.decorator_list),
                 docstring=ast.get_docstring(node),
                 calls=calls,
@@ -318,3 +320,10 @@ def _call_target_name(node: ast.expr) -> str:
 def _end_line(node: ast.AST) -> int:
     end_line = getattr(node, "end_lineno", None)
     return int(end_line) if end_line is not None else int(getattr(node, "lineno", 0))
+
+
+def _source_start_line(node: ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef) -> int:
+    decorator_lines = [getattr(decorator, "lineno", node.lineno) for decorator in node.decorator_list]
+    if decorator_lines:
+        return min([node.lineno, *decorator_lines])
+    return int(node.lineno)

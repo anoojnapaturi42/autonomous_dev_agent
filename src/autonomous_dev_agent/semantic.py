@@ -112,7 +112,7 @@ def build_semantic_index(
                     symbol_name=symbol.name,
                     qualified_name=symbol.qualified_name,
                     kind=symbol.kind,
-                    start_line=symbol.line,
+                    start_line=symbol.source_start_line or symbol.line,
                     end_line=symbol.end_line,
                     text=text,
                     docstring=symbol.docstring,
@@ -125,7 +125,7 @@ def build_semantic_index(
 
 
 def _build_chunk_text(symbol: PythonSymbol, source_lines: list[str]) -> str:
-    excerpt = _slice_source(source_lines, symbol.line, symbol.end_line)
+    excerpt = _slice_source(source_lines, symbol.source_start_line or symbol.line, symbol.end_line)
     metadata_lines = [
         f"name: {symbol.qualified_name}",
         f"kind: {symbol.kind}",

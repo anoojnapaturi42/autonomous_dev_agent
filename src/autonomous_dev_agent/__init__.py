@@ -5,6 +5,7 @@ from .logging_config import configure_logging
 from .ast_parser import AstPythonParser, ParsedPythonFile
 from .graphs import CallGraph, ModuleDependencyGraph
 from .embeddings import EmbeddingProvider, EmbeddingProviderConfig, SimpleEmbeddingProvider, create_embedding_provider
+from .editing import EditPreview, EditResult, FileEdit, SafeEditingEngine, SpanEdit, SymbolEdit
 from .repository import LocalRepository, Repository
 from .planning import ExecutionPlan, PlanStep, PlanningModule
 from .scanner import RepositoryScanner
@@ -17,6 +18,9 @@ __all__ = [
     "create_embedding_provider",
     "EmbeddingProvider",
     "EmbeddingProviderConfig",
+    "EditPreview",
+    "EditResult",
+    "FileEdit",
     "ExecutionPlan",
     "LocalRepository",
     "ModuleDependencyGraph",
@@ -29,11 +33,14 @@ __all__ = [
     "Repository",
     "RepositoryIndex",
     "RepositoryScanner",
+    "SafeEditingEngine",
     "SemanticChunk",
     "SemanticIndex",
     "SemanticSearchResult",
+    "SpanEdit",
     "SimpleEmbeddingProvider",
     "SymbolIndex",
+    "SymbolEdit",
     "Settings",
     "configure_logging",
     "load_settings",
