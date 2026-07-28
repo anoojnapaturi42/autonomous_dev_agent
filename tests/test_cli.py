@@ -6,8 +6,13 @@ import sys
 import unittest
 from pathlib import Path
 
+from autonomous_dev_agent.repository import LocalRepository
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+EVAL_REPOS_ROOT = REPO_ROOT / "eval_repos"
+LOCAL_REPO_FIXTURE = EVAL_REPOS_ROOT / "toy"
+NON_REPO_FIXTURE = EVAL_REPOS_ROOT / "not_a_repo"
 
 
 class CLITestCase(unittest.TestCase):
@@ -36,3 +41,39 @@ class CLITestCase(unittest.TestCase):
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("agent logic is not implemented yet", result.stdout.lower())
 
+
+class LocalRepositoryTestCase(unittest.TestCase):
+    def test_lists_files_and_ignores_virtualenv_and_cache_dirs(self) -> None:
+        repo = LocalRepository(LOCAL_REPO_FIXTURE)
+
+        files = repo.list_files()
+
+        self.assertEqual(
+            files,
+            [
+                Path("docs/guide.py"),
+                Path("src/module.py"),
+                Path("src/notes.txt"),
+            ],
+        )
+
+    def test_discovers_python_files_only(self) -> None:
+        repo = LocalRepository(LOCAL_REPO_FIXTURE)
+
+        python_files = repo.list_python_files()
+
+        self.assertEqual(
+            python_files,
+            [Path("docs/guide.py"), Path("src/module.py")],
+        )
+
+    def test_reads_file_contents(self) -> None:
+        repo = LocalRepository(LOCAL_REPO_FIXTURE)
+
+        contents = repo.read_file("src/module.py")
+
+        self.assertEqual(contents, "print('hello')\n\n")
+
+    def test_rejects_non_git_directory(self) -> None:
+        with self.assertRaises(ValueError):
+            LocalRepository(NON_REPO_FIXTURE)
