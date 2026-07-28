@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .ast_parser import AstPythonParser
+from .graphs import build_call_graph, build_module_dependency_graph
 from .repository import Repository
 from .symbol_index import PythonFileIndex, PythonSymbol, RepositoryIndex, SymbolIndex
 
@@ -24,10 +25,14 @@ class RepositoryScanner:
             file_index = self._scan_python_file(path)
             indexed_files.append(file_index)
             symbols.extend(file_index.symbols)
+        module_graph = build_module_dependency_graph(indexed_files)
+        call_graph = build_call_graph(indexed_files)
         return RepositoryIndex(
             root=self._repository.root,
             python_files=tuple(indexed_files),
             symbol_index=SymbolIndex(tuple(symbols)),
+            module_graph=module_graph,
+            call_graph=call_graph,
             scanned_at=datetime.now(timezone.utc),
         )
 

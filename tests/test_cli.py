@@ -52,6 +52,8 @@ class LocalRepositoryTestCase(unittest.TestCase):
             files,
             [
                 Path("docs/guide.py"),
+                Path("src/graph_a.py"),
+                Path("src/graph_b.py"),
                 Path("src/module.py"),
                 Path("src/notes.txt"),
             ],
@@ -64,7 +66,12 @@ class LocalRepositoryTestCase(unittest.TestCase):
 
         self.assertEqual(
             python_files,
-            [Path("docs/guide.py"), Path("src/module.py")],
+            [
+                Path("docs/guide.py"),
+                Path("src/graph_a.py"),
+                Path("src/graph_b.py"),
+                Path("src/module.py"),
+            ],
         )
 
     def test_reads_file_contents(self) -> None:
@@ -75,6 +82,7 @@ class LocalRepositoryTestCase(unittest.TestCase):
         self.assertTrue(contents.startswith('"""Toy module for AST parsing tests."""'))
         self.assertIn("class SampleWorker(BaseWorker):", contents)
         self.assertIn("@traced", contents)
+        self.assertIn("def format_result(value: str) -> str:", contents)
         self.assertIn("def build_index() -> defaultdict[str, int]:", contents)
 
     def test_rejects_non_git_directory(self) -> None:

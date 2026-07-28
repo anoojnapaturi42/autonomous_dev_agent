@@ -164,6 +164,7 @@ class _AstCollector:
         container_kind: str,
     ) -> None:
         kind = "method" if container_kind == "class" else "function"
+        calls = _collect_calls(node.body)
         self.symbols.append(
             PythonSymbol(
                 name=node.name,
@@ -174,6 +175,7 @@ class _AstCollector:
                 end_line=_end_line(node),
                 decorators=tuple(_decorator_name(decorator) for decorator in node.decorator_list),
                 docstring=ast.get_docstring(node),
+                calls=calls,
             )
         )
 
@@ -220,12 +222,14 @@ class _AstCollector:
         return ".".join(part for part in parts if part)
 
     def _build_import(self, node: ast.Import | ast.ImportFrom) -> PythonImport:
+        targets = _import_targets(node)
         return PythonImport(
             statement=ast.unparse(node).strip(),
             module=node.module if isinstance(node, ast.ImportFrom) else None,
             names=tuple(alias.asname or alias.name for alias in node.names),
             line=node.lineno,
             end_line=_end_line(node),
+            targets=targets,
         )
 
 
@@ -250,7 +254,67 @@ def _expression_name(node: ast.expr) -> str:
     return ast.unparse(node).strip()
 
 
+def _import_targets(node: ast.Import | ast.ImportFrom) -> tuple[str, ...]:
+    if isinstance(node, ast.Import):
+        return tuple(alias.name for alias in node.names)
+
+    base = "." * node.level + (node.module or "")
+    targets: list[str] = []
+    for alias in node.names:
+        if alias.name == "*":
+            targets.append(base)
+        elif base:
+            targets.append(f"{base}.{alias.name}")
+        else:
+            targets.append(alias.name)
+    return tuple(targets)
+
+
+def _collect_calls(body: Iterable[ast.stmt]) -> tuple[str, ...]:
+    collector = _CallCollector()
+    collector.collect(body)
+    return tuple(collector.calls)
+
+
+class _CallCollector(ast.NodeVisitor):
+    """Collect approximate call targets from a function body."""
+
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+        self._seen: set[str] = set()
+
+    def collect(self, body: Iterable[ast.stmt]) -> None:
+        for statement in body:
+            self.visit(statement)
+
+    def visit_Call(self, node: ast.Call) -> None:
+        name = _call_target_name(node.func)
+        if name and name not in self._seen:
+            self.calls.append(name)
+            self._seen.add(name)
+        self.generic_visit(node)
+
+    def visit_FunctionDef(self, node: ast.FunctionDef) -> None:  # noqa: N802
+        return
+
+    def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:  # noqa: N802
+        return
+
+    def visit_ClassDef(self, node: ast.ClassDef) -> None:  # noqa: N802
+        return
+
+    def visit_Lambda(self, node: ast.Lambda) -> None:  # noqa: N802
+        return
+
+
+def _call_target_name(node: ast.expr) -> str:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return ast.unparse(node).strip()
+
+
 def _end_line(node: ast.AST) -> int:
     end_line = getattr(node, "end_lineno", None)
     return int(end_line) if end_line is not None else int(getattr(node, "lineno", 0))
-

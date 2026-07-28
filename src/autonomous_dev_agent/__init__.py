@@ -3,13 +3,16 @@
 from .config import Settings, load_settings
 from .logging_config import configure_logging
 from .ast_parser import AstPythonParser, ParsedPythonFile
+from .graphs import CallGraph, ModuleDependencyGraph
 from .repository import LocalRepository, Repository
 from .scanner import RepositoryScanner
 from .symbol_index import PythonFileIndex, PythonImport, PythonSymbol, RepositoryIndex, SymbolIndex
 
 __all__ = [
     "AstPythonParser",
+    "CallGraph",
     "LocalRepository",
+    "ModuleDependencyGraph",
     "PythonFileIndex",
     "PythonImport",
     "PythonSymbol",

@@ -13,6 +13,12 @@ def traced(func):
     return func
 
 
+def format_result(value: str) -> str:
+    """Format a result string."""
+
+    return value.upper()
+
+
 class BaseWorker:
     """Base worker implementation."""
 
@@ -29,7 +35,7 @@ class SampleWorker(BaseWorker):
     def run(self) -> str:
         """Return the basename of a known file."""
 
-        result = os.path.basename("hello.txt")
+        result = format_result(os.path.basename("hello.txt"))
         return result
 
 
@@ -38,5 +44,6 @@ def build_index() -> defaultdict[str, int]:
     """Build a tiny in-memory index."""
 
     index = defaultdict(int)
-    index["hello"] += 1
+    label = format_result("hello")
+    index[label] += 1
     return index

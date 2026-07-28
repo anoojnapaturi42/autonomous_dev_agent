@@ -6,6 +6,10 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from collections import defaultdict
 from pathlib import Path
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .graphs import CallGraph, ModuleDependencyGraph
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,6 +21,7 @@ class PythonImport:
     names: tuple[str, ...]
     line: int
     end_line: int
+    targets: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,6 +37,7 @@ class PythonSymbol:
     decorators: tuple[str, ...] = ()
     docstring: str | None = None
     bases: tuple[str, ...] = ()
+    calls: tuple[str, ...] = ()
 
 
 class SymbolIndex:
@@ -97,4 +103,6 @@ class RepositoryIndex:
     root: Path
     python_files: tuple[PythonFileIndex, ...]
     symbol_index: SymbolIndex
+    module_graph: ModuleDependencyGraph
+    call_graph: CallGraph
     scanned_at: datetime
