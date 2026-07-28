@@ -72,7 +72,24 @@ class LocalRepositoryTestCase(unittest.TestCase):
 
         contents = repo.read_file("src/module.py")
 
-        self.assertEqual(contents, "print('hello')\n\n")
+        self.assertEqual(
+            contents.splitlines(),
+            [
+                "import os",
+                "from collections import defaultdict",
+                "",
+                "",
+                "class SampleWorker:",
+                "    def run(self) -> str:",
+                "        return os.path.basename(\"hello.txt\")",
+                "",
+                "",
+                "def build_index() -> defaultdict[str, int]:",
+                "    index = defaultdict(int)",
+                "    index[\"hello\"] += 1",
+                "    return index",
+            ],
+        )
 
     def test_rejects_non_git_directory(self) -> None:
         with self.assertRaises(ValueError):
