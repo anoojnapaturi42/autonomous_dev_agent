@@ -6,6 +6,7 @@ from .ast_parser import AstPythonParser, ParsedPythonFile
 from .graphs import CallGraph, ModuleDependencyGraph
 from .embeddings import EmbeddingProvider, EmbeddingProviderConfig, SimpleEmbeddingProvider, create_embedding_provider
 from .repository import LocalRepository, Repository
+from .planning import ExecutionPlan, PlanStep, PlanningModule
 from .scanner import RepositoryScanner
 from .semantic import SemanticChunk, SemanticIndex, SemanticSearchResult
 from .symbol_index import PythonFileIndex, PythonImport, PythonSymbol, RepositoryIndex, SymbolIndex
@@ -16,8 +17,11 @@ __all__ = [
     "create_embedding_provider",
     "EmbeddingProvider",
     "EmbeddingProviderConfig",
+    "ExecutionPlan",
     "LocalRepository",
     "ModuleDependencyGraph",
+    "PlanStep",
+    "PlanningModule",
     "PythonFileIndex",
     "PythonImport",
     "PythonSymbol",
