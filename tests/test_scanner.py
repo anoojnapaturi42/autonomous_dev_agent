@@ -26,6 +26,7 @@ class RepositoryScannerTestCase(unittest.TestCase):
             list(files),
             [
                 Path("docs/guide.py"),
+                Path("src/auth.py"),
                 Path("src/graph_a.py"),
                 Path("src/graph_b.py"),
                 Path("src/module.py"),
@@ -33,6 +34,7 @@ class RepositoryScannerTestCase(unittest.TestCase):
         )
 
         guide = files[Path("docs/guide.py")]
+        auth = files[Path("src/auth.py")]
         module = files[Path("src/module.py")]
         graph_a = files[Path("src/graph_a.py")]
         graph_b = files[Path("src/graph_b.py")]
@@ -45,6 +47,12 @@ class RepositoryScannerTestCase(unittest.TestCase):
         self.assertEqual(guide.functions, ("guide_root",))
         self.assertEqual(guide.symbols[0].docstring, "Return the root path for the guide.")
         self.assertIsNone(guide.parse_error)
+
+        self.assertEqual(auth.module_docstring, "Authentication helpers for the toy repository.")
+        self.assertEqual(auth.functions, ("authenticate_user",))
+        self.assertEqual(auth.symbols[0].docstring, "Handle authentication for sign-in requests.")
+        self.assertEqual(auth.symbols[0].kind, "function")
+        self.assertIsNone(auth.parse_error)
 
         self.assertEqual(module.module_docstring, "Toy module for AST parsing tests.")
         self.assertEqual(
@@ -93,6 +101,7 @@ class RepositoryScannerTestCase(unittest.TestCase):
 
         self.assertEqual(index.module_graph.dependencies_of("src.graph_a"), ("src.graph_b",))
         self.assertEqual(index.module_graph.dependencies_of("src.graph_b"), ("src.graph_a",))
+        self.assertEqual(index.module_graph.dependencies_of("src.auth"), ())
         self.assertEqual(index.module_graph.cycles(), (("src.graph_a", "src.graph_b"),))
         self.assertEqual(index.module_graph.dependents_of("src.graph_a"), ("src.graph_b",))
 
@@ -111,11 +120,23 @@ class RepositoryScannerTestCase(unittest.TestCase):
         self.assertIn({"from": "build_index", "to": "format_result"}, call_graph_json["edges"])
         self.assertIn({"from": "SampleWorker.run", "to": "format_result"}, call_graph_json["edges"])
 
+        semantic_results = index.semantic_index.search("Where is authentication handled?", top_k=3)
+        self.assertGreaterEqual(semantic_results[0].score, semantic_results[-1].score)
+        self.assertEqual(semantic_results[0].chunk.path, Path("src/auth.py"))
+        self.assertEqual(semantic_results[0].chunk.symbol_name, "authenticate_user")
+
+        semantic_json = json.loads(index.semantic_index.to_json("Where is authentication handled?", top_k=3))
+        self.assertEqual(semantic_json["query"], "Where is authentication handled?")
+        self.assertEqual(semantic_json["results"][0]["chunk"]["path"], "src/auth.py")
+        self.assertEqual(semantic_json["results"][0]["chunk"]["symbol_name"], "authenticate_user")
+
         self.assertEqual(guide.modified_at.tzinfo, timezone.utc)
+        self.assertEqual(auth.modified_at.tzinfo, timezone.utc)
         self.assertEqual(module.modified_at.tzinfo, timezone.utc)
         self.assertEqual(graph_a.modified_at.tzinfo, timezone.utc)
         self.assertEqual(graph_b.modified_at.tzinfo, timezone.utc)
         self.assertGreater(guide.size, 0)
+        self.assertGreater(auth.size, 0)
         self.assertGreater(module.size, 0)
         self.assertGreater(graph_a.size, 0)
         self.assertGreater(graph_b.size, 0)

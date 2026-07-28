@@ -15,6 +15,8 @@ class Settings:
     app_name: str
     environment: str
     log_level: str
+    embedding_provider: str
+    embedding_dimension: int
     project_root: Path
     debug: bool
 
@@ -38,7 +40,8 @@ def load_settings(
         app_name=env.get("AUTONOMOUS_DEV_AGENT_APP_NAME", "autonomous-dev-agent"),
         environment=env.get("AUTONOMOUS_DEV_AGENT_ENV", "development"),
         log_level=env.get("AUTONOMOUS_DEV_AGENT_LOG_LEVEL", "INFO").upper(),
+        embedding_provider=env.get("AUTONOMOUS_DEV_AGENT_EMBEDDING_PROVIDER", "simple"),
+        embedding_dimension=int(env.get("AUTONOMOUS_DEV_AGENT_EMBEDDING_DIMENSION", "128")),
         project_root=root.resolve(),
         debug=_get_bool(env.get("AUTONOMOUS_DEV_AGENT_DEBUG")),
     )
-

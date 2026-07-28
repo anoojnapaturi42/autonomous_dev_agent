@@ -52,6 +52,7 @@ class LocalRepositoryTestCase(unittest.TestCase):
             files,
             [
                 Path("docs/guide.py"),
+                Path("src/auth.py"),
                 Path("src/graph_a.py"),
                 Path("src/graph_b.py"),
                 Path("src/module.py"),
@@ -68,6 +69,7 @@ class LocalRepositoryTestCase(unittest.TestCase):
             python_files,
             [
                 Path("docs/guide.py"),
+                Path("src/auth.py"),
                 Path("src/graph_a.py"),
                 Path("src/graph_b.py"),
                 Path("src/module.py"),
@@ -84,6 +86,7 @@ class LocalRepositoryTestCase(unittest.TestCase):
         self.assertIn("@traced", contents)
         self.assertIn("def format_result(value: str) -> str:", contents)
         self.assertIn("def build_index() -> defaultdict[str, int]:", contents)
+        self.assertIn("def authenticate_user(username: str, password: str) -> bool:", (LOCAL_REPO_FIXTURE / "src" / "auth.py").read_text())
 
     def test_rejects_non_git_directory(self) -> None:
         with self.assertRaises(ValueError):

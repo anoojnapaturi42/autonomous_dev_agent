@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .graphs import CallGraph, ModuleDependencyGraph
+    from .semantic import SemanticIndex
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,4 +106,5 @@ class RepositoryIndex:
     symbol_index: SymbolIndex
     module_graph: ModuleDependencyGraph
     call_graph: CallGraph
+    semantic_index: SemanticIndex
     scanned_at: datetime
