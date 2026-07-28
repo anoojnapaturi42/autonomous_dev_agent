@@ -72,24 +72,10 @@ class LocalRepositoryTestCase(unittest.TestCase):
 
         contents = repo.read_file("src/module.py")
 
-        self.assertEqual(
-            contents.splitlines(),
-            [
-                "import os",
-                "from collections import defaultdict",
-                "",
-                "",
-                "class SampleWorker:",
-                "    def run(self) -> str:",
-                "        return os.path.basename(\"hello.txt\")",
-                "",
-                "",
-                "def build_index() -> defaultdict[str, int]:",
-                "    index = defaultdict(int)",
-                "    index[\"hello\"] += 1",
-                "    return index",
-            ],
-        )
+        self.assertTrue(contents.startswith('"""Toy module for AST parsing tests."""'))
+        self.assertIn("class SampleWorker(BaseWorker):", contents)
+        self.assertIn("@traced", contents)
+        self.assertIn("def build_index() -> defaultdict[str, int]:", contents)
 
     def test_rejects_non_git_directory(self) -> None:
         with self.assertRaises(ValueError):

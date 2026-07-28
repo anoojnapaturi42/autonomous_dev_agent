@@ -2,34 +2,12 @@
 
 from __future__ import annotations
 
-import ast
-from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
+from .ast_parser import AstPythonParser
 from .repository import Repository
-
-
-@dataclass(frozen=True, slots=True)
-class PythonFileIndex:
-    """Structured metadata for one Python file."""
-
-    path: Path
-    size: int
-    modified_at: datetime
-    imports: tuple[str, ...]
-    classes: tuple[str, ...]
-    functions: tuple[str, ...]
-    parse_error: str | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class RepositoryIndex:
-    """Structured scan results for an indexed repository."""
-
-    root: Path
-    python_files: tuple[PythonFileIndex, ...]
-    scanned_at: datetime
+from .symbol_index import PythonFileIndex, PythonSymbol, RepositoryIndex, SymbolIndex
 
 
 class RepositoryScanner:
@@ -37,12 +15,19 @@ class RepositoryScanner:
 
     def __init__(self, repository: Repository) -> None:
         self._repository = repository
+        self._parser = AstPythonParser()
 
     def scan(self) -> RepositoryIndex:
-        indexed_files = tuple(self._scan_python_file(path) for path in self._repository.list_python_files())
+        indexed_files: list[PythonFileIndex] = []
+        symbols: list[PythonSymbol] = []
+        for path in self._repository.list_python_files():
+            file_index = self._scan_python_file(path)
+            indexed_files.append(file_index)
+            symbols.extend(file_index.symbols)
         return RepositoryIndex(
             root=self._repository.root,
-            python_files=indexed_files,
+            python_files=tuple(indexed_files),
+            symbol_index=SymbolIndex(tuple(symbols)),
             scanned_at=datetime.now(timezone.utc),
         )
 
@@ -51,37 +36,10 @@ class RepositoryScanner:
         contents = self._repository.read_file(relative_path)
         stat_result = absolute_path.stat()
 
-        imports, classes, functions, parse_error = self._extract_python_symbols(contents)
-
-        return PythonFileIndex(
-            path=relative_path,
+        parsed = self._parser.parse(
+            relative_path,
+            contents,
             size=stat_result.st_size,
             modified_at=datetime.fromtimestamp(stat_result.st_mtime, tz=timezone.utc),
-            imports=imports,
-            classes=classes,
-            functions=functions,
-            parse_error=parse_error,
         )
-
-    def _extract_python_symbols(
-        self, source: str
-    ) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...], str | None]:
-        try:
-            module = ast.parse(source)
-        except SyntaxError as exc:
-            return (), (), (), str(exc)
-
-        imports: list[str] = []
-        classes: list[str] = []
-        functions: list[str] = []
-
-        for node in module.body:
-            if isinstance(node, (ast.Import, ast.ImportFrom)):
-                imports.append(ast.unparse(node).strip())
-            elif isinstance(node, ast.ClassDef):
-                classes.append(node.name)
-            elif isinstance(node, ast.FunctionDef):
-                functions.append(node.name)
-
-        return tuple(imports), tuple(classes), tuple(functions), None
-
+        return parsed.file_index
