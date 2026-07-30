@@ -11,6 +11,7 @@ from .planning import ExecutionPlan, PlanStep, PlanningModule
 from .scanner import RepositoryScanner
 from .semantic import SemanticChunk, SemanticIndex, SemanticSearchResult
 from .symbol_index import PythonFileIndex, PythonImport, PythonSymbol, RepositoryIndex, SymbolIndex
+from .tester import PytestTestRunner, TestRunResult
 
 __all__ = [
     "AstPythonParser",
@@ -42,6 +43,8 @@ __all__ = [
     "SymbolIndex",
     "SymbolEdit",
     "Settings",
+    "PytestTestRunner",
+    "TestRunResult",
     "configure_logging",
     "load_settings",
 ]

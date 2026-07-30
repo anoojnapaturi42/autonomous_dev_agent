@@ -45,19 +45,25 @@ class PythonSymbol:
 class SymbolIndex:
     """Searchable symbol index built from parsed Python files."""
 
-    def __init__(self, symbols: tuple[PythonSymbol, ...] = ()) -> None:
+    def __init__(
+        self,
+        symbols: tuple[PythonSymbol, ...] = (),
+        *,
+        repository_root: str | Path | None = None,
+    ) -> None:
         self.symbols = symbols
         self._by_name: dict[str, list[PythonSymbol]] = defaultdict(list)
         self._by_path: dict[Path, list[PythonSymbol]] = defaultdict(list)
+        self._repository_root = Path(repository_root).resolve() if repository_root is not None else None
         for symbol in symbols:
             self._by_name[symbol.name].append(symbol)
-            self._by_path[symbol.path].append(symbol)
+            self._by_path[self._normalize_path(symbol.path)].append(symbol)
 
     def find_by_name(self, name: str) -> tuple[PythonSymbol, ...]:
         return tuple(self._by_name.get(name, ()))
 
     def find_by_location(self, path: str | Path, line: int) -> tuple[PythonSymbol, ...]:
-        normalized_path = Path(path)
+        normalized_path = self._normalize_path(path)
         matches = [
             symbol
             for symbol in self._by_path.get(normalized_path, ())
@@ -66,7 +72,23 @@ class SymbolIndex:
         return tuple(sorted(matches, key=lambda symbol: (symbol.line, symbol.end_line, symbol.kind, symbol.name)))
 
     def find_in_file(self, path: str | Path) -> tuple[PythonSymbol, ...]:
-        return tuple(self._by_path.get(Path(path), ()))
+        return tuple(self._by_path.get(self._normalize_path(path), ()))
+
+    def _normalize_path(self, path: str | Path) -> Path:
+        candidate = Path(path)
+        if self._repository_root is not None and candidate.is_absolute():
+            try:
+                relative = candidate.resolve().relative_to(self._repository_root)
+            except ValueError:
+                pass
+            else:
+                return relative
+        if candidate.is_absolute() and self._repository_root is None:
+            try:
+                candidate = candidate.name if len(candidate.parts) == 1 else Path(*candidate.parts[-2:])
+            except Exception:
+                return candidate
+        return Path(candidate)
 
 
 @dataclass(frozen=True, slots=True)

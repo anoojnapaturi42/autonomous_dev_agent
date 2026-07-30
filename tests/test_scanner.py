@@ -99,6 +99,11 @@ class RepositoryScannerTestCase(unittest.TestCase):
         function_location_matches = index.symbol_index.find_by_location(Path("src/module.py"), 46)
         self.assertEqual({symbol.name for symbol in function_location_matches}, {"build_index", "index"})
 
+        absolute_location_matches = index.symbol_index.find_by_location(LOCAL_REPO_FIXTURE / "src" / "module.py", 38)
+        self.assertEqual({symbol.name for symbol in absolute_location_matches}, {"SampleWorker", "run", "result"})
+        absolute_file_matches = index.symbol_index.find_in_file(LOCAL_REPO_FIXTURE / "src" / "module.py")
+        self.assertTrue(any(symbol.name == "SampleWorker" for symbol in absolute_file_matches))
+
         self.assertEqual(index.module_graph.dependencies_of("src.graph_a"), ("src.graph_b",))
         self.assertEqual(index.module_graph.dependencies_of("src.graph_b"), ("src.graph_a",))
         self.assertEqual(index.module_graph.dependencies_of("src.auth"), ())

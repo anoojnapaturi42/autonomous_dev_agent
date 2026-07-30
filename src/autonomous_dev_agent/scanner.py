@@ -41,7 +41,7 @@ class RepositoryScanner:
         return RepositoryIndex(
             root=self._repository.root,
             python_files=tuple(indexed_files),
-            symbol_index=SymbolIndex(tuple(symbols)),
+            symbol_index=SymbolIndex(tuple(symbols), repository_root=self._repository.root),
             module_graph=module_graph,
             call_graph=call_graph,
             semantic_index=semantic_index,

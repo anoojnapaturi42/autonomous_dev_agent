@@ -6,6 +6,7 @@ import typer
 
 from .config import Settings, load_settings
 from .logging_config import configure_logging
+from .tester import PytestTestRunner
 
 app = typer.Typer(
     help="Autonomous Dev Agent command line interface.",
@@ -35,6 +36,15 @@ def agent_command(ctx: typer.Context) -> None:
         f"in {settings.environment} mode."
     )
     typer.echo("Agent logic is not implemented yet.")
+
+
+@app.command("test")
+def test_command() -> None:
+    """Detect pytest and run the repository test suite, returning structured JSON."""
+
+    runner = PytestTestRunner(load_settings().project_root)
+    result = runner.run()
+    typer.echo(result.to_json())
 
 
 def main() -> None:

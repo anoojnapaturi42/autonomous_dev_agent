@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 
 from autonomous_dev_agent.repository import LocalRepository
+from autonomous_dev_agent.tester import PytestTestRunner
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -40,6 +41,34 @@ class CLITestCase(unittest.TestCase):
         result = self.run_cli("agent")
         self.assertEqual(result.returncode, 0, msg=result.stderr)
         self.assertIn("agent logic is not implemented yet", result.stdout.lower())
+
+    def test_test_command_runs_pytest_and_emits_structured_json(self) -> None:
+        result = self.run_cli("test")
+        self.assertEqual(result.returncode, 0, msg=result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["runner"], "pytest")
+        self.assertEqual(payload["exit_code"], 0)
+        self.assertTrue(payload["success"])
+        self.assertIn("summary", payload)
+
+
+class PytestRunnerTestCase(unittest.TestCase):
+    def test_detects_pytest_and_returns_structured_results(self) -> None:
+        runner = PytestTestRunner(REPO_ROOT)
+
+        self.assertEqual(runner.detect(), "pytest")
+
+        result = runner.run()
+        payload = result.to_dict()
+
+        self.assertEqual(result.runner, "pytest")
+        self.assertEqual(result.exit_code, 0)
+        self.assertTrue(result.success)
+        self.assertIn("summary", payload)
+        self.assertIn("cases", payload)
+        self.assertEqual(payload["runner"], "pytest")
+        self.assertEqual(payload["exit_code"], 0)
+        self.assertGreaterEqual(payload["summary"]["passed"], 1)
 
 
 class LocalRepositoryTestCase(unittest.TestCase):
