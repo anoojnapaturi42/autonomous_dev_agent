@@ -31,6 +31,16 @@ class PlanStep:
             "confidence": self.confidence,
         }
 
+    @classmethod
+    def from_dict(cls, payload: dict[str, object]) -> "PlanStep":
+        return cls(
+            target_file=Path(str(payload.get("target_file", ""))),
+            rationale=str(payload.get("rationale", "")),
+            expected_modifications=tuple(str(item) for item in payload.get("expected_modifications", ())),
+            risks=tuple(str(item) for item in payload.get("risks", ())),
+            confidence=float(payload.get("confidence", 0.0)),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class ExecutionPlan:
@@ -53,6 +63,16 @@ class ExecutionPlan:
 
     def to_json(self, *, indent: int = 2) -> str:
         return json.dumps(self.to_dict(), indent=indent, sort_keys=True)
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, object]) -> "ExecutionPlan":
+        return cls(
+            objective=str(payload.get("objective", "")),
+            target_files=tuple(Path(str(item)) for item in payload.get("target_files", ())),
+            steps=tuple(PlanStep.from_dict(item) for item in payload.get("steps", ())),
+            overall_confidence=float(payload.get("overall_confidence", 0.0)),
+            created_at=datetime.fromisoformat(str(payload.get("created_at"))),
+        )
 
 
 class PlanningModule:
@@ -149,4 +169,3 @@ class PlanningModule:
             if file_index.path == path:
                 return file_index
         return None
-

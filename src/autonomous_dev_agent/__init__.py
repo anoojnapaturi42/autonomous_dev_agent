@@ -2,6 +2,18 @@
 
 from .config import Settings, load_settings
 from .autonomy import AutonomousAttempt, AutonomousEditContext, AutonomousEngineer, AutonomousRunResult
+from .checkpoint import OrchestrationCheckpoint, OrchestrationCheckpointStore
+from .orchestrator import AutonomousOrchestrator, OrchestrationProgressEvent, ProgressReporter
+from .memory import (
+    FailureMemoryRecord,
+    MemoryRecall,
+    MemoryState,
+    PersistentMemoryStore,
+    RepositorySummaryRecord,
+    SuccessfulFixRecord,
+    TaskMemoryRecord,
+)
+from .workspace import GitWorkspaceManager, GitWorkspaceState
 from .logging_config import configure_logging
 from .ast_parser import AstPythonParser, ParsedPythonFile
 from .graphs import CallGraph, ModuleDependencyGraph
@@ -21,6 +33,7 @@ __all__ = [
     "AutonomousEditContext",
     "AutonomousEngineer",
     "AutonomousRunResult",
+    "AutonomousOrchestrator",
     "CallGraph",
     "create_embedding_provider",
     "EmbeddingProvider",
@@ -32,8 +45,13 @@ __all__ = [
     "FailureAnalysis",
     "FailureAnalysisResult",
     "FailureCauseSummary",
+    "FailureMemoryRecord",
     "FailureSummary",
     "LocalRepository",
+    "MemoryRecall",
+    "MemoryState",
+    "GitWorkspaceManager",
+    "GitWorkspaceState",
     "ModuleDependencyGraph",
     "PlanStep",
     "PlanningModule",
@@ -44,15 +62,23 @@ __all__ = [
     "Repository",
     "RepositoryIndex",
     "RepositoryScanner",
+    "RepositorySummaryRecord",
     "SafeEditingEngine",
     "SemanticChunk",
     "SemanticIndex",
     "SemanticSearchResult",
     "SpanEdit",
     "SimpleEmbeddingProvider",
+    "SuccessfulFixRecord",
     "SymbolIndex",
     "SymbolEdit",
     "Settings",
+    "OrchestrationProgressEvent",
+    "PersistentMemoryStore",
+    "ProgressReporter",
+    "OrchestrationCheckpoint",
+    "OrchestrationCheckpointStore",
+    "TaskMemoryRecord",
     "PytestTestRunner",
     "TestCaseResult",
     "TestRunResult",

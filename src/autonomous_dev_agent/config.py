@@ -18,6 +18,7 @@ class Settings:
     embedding_provider: str
     embedding_dimension: int
     project_root: Path
+    memory_path: Path
     debug: bool
 
 
@@ -43,5 +44,17 @@ def load_settings(
         embedding_provider=env.get("AUTONOMOUS_DEV_AGENT_EMBEDDING_PROVIDER", "simple"),
         embedding_dimension=int(env.get("AUTONOMOUS_DEV_AGENT_EMBEDDING_DIMENSION", "128")),
         project_root=root.resolve(),
+        memory_path=_resolve_path(
+            env.get("AUTONOMOUS_DEV_AGENT_MEMORY_PATH"),
+            default=root / ".autonomous_dev_agent" / "memory.json",
+            base=root,
+        ),
         debug=_get_bool(env.get("AUTONOMOUS_DEV_AGENT_DEBUG")),
     )
+
+
+def _resolve_path(value: str | None, *, default: Path, base: Path) -> Path:
+    candidate = Path(value).expanduser() if value else default
+    if not candidate.is_absolute():
+        candidate = base / candidate
+    return candidate.resolve()

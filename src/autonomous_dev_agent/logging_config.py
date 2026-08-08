@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from logging.config import dictConfig
+import sys
 from typing import Any
 
 from .config import Settings, load_settings
@@ -25,6 +26,7 @@ def build_logging_config(settings: Settings) -> dict[str, Any]:
                 "class": "logging.StreamHandler",
                 "formatter": "standard",
                 "level": settings.log_level,
+                "stream": sys.__stderr__,
             },
         },
         "root": {
@@ -43,4 +45,3 @@ def configure_logging(settings: Settings | None = None) -> Settings:
         "Logging configured for %s", active_settings.app_name
     )
     return active_settings
-

@@ -17,6 +17,7 @@ _IGNORED_NAMES = {
     ".tox",
     ".nox",
     ".hypothesis",
+    ".autonomous_dev_agent",
     "node_modules",
     "venv",
     ".venv",

@@ -8,6 +8,7 @@ import typer
 
 from .autonomy import AutonomousEngineer
 from .config import Settings, load_settings
+from .memory import PersistentMemoryStore
 from .repository import LocalRepository
 from .logging_config import configure_logging
 from .tester import PytestTestRunner
@@ -67,9 +68,29 @@ def autonomous_command(
 
     settings = load_settings()
     repository = LocalRepository(settings.project_root)
-    engineer = AutonomousEngineer(repository, retry_limit=retry_limit)
+    engineer = AutonomousEngineer(
+        repository,
+        retry_limit=retry_limit,
+        memory_store=PersistentMemoryStore(settings.memory_path),
+    )
     result = engineer.run(objective, retry_limit=retry_limit)
     typer.echo(json.dumps(result.to_dict(), indent=2, sort_keys=True))
+
+
+@app.command("rollback")
+def rollback_command() -> None:
+    """Restore the repository to the original checkout captured before edits."""
+
+    settings = load_settings()
+    repository = LocalRepository(settings.project_root)
+    engineer = AutonomousEngineer(
+        repository,
+        memory_store=PersistentMemoryStore(settings.memory_path),
+    )
+    if engineer.rollback_workspace():
+        typer.echo("Restored the original repository state.")
+    else:
+        typer.echo("No prepared Git workspace state was found to roll back.")
 
 
 def main() -> None:

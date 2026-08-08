@@ -117,11 +117,15 @@ src/autonomous_dev_agent/
   embeddings.py       # Embedding provider abstraction
   graphs.py           # Module dependency and call graphs
   logging_config.py   # Logging setup
+  checkpoint.py       # Resumable orchestration checkpoints
+  memory.py           # Persistent task/fix/failure memory
   planning.py         # Execution plan generation
+  orchestrator.py     # Central planning/editing/testing coordinator
   repository.py       # Repository abstractions and local provider
   scanner.py          # Repository-wide Python indexing
   semantic.py         # Semantic chunking and search
   symbol_index.py     # Structured symbols and file indexes
+  workspace.py        # Git workspace preparation and rollback
 ```
 
 ## Configuration
@@ -133,6 +137,7 @@ Settings are loaded from environment variables:
 - `AUTONOMOUS_DEV_AGENT_LOG_LEVEL`
 - `AUTONOMOUS_DEV_AGENT_DEBUG`
 - `AUTONOMOUS_DEV_AGENT_ROOT`
+- `AUTONOMOUS_DEV_AGENT_MEMORY_PATH`
 - `AUTONOMOUS_DEV_AGENT_EMBEDDING_PROVIDER`
 - `AUTONOMOUS_DEV_AGENT_EMBEDDING_DIMENSION`
 
@@ -153,6 +158,8 @@ The test suite covers:
 - repository scanning and AST metadata
 - semantic search and planning
 - safe diff-first editing
+- orchestrated edit-test-analyze-retry runs
+- persistent memory recall and reuse
 
 ## Package Entry Points
 
@@ -160,8 +167,11 @@ The test suite covers:
 - `python -m autonomous_dev_agent agent`
 - `python -m autonomous_dev_agent autonomous`
 - `python -m autonomous_dev_agent test`
+- `python -m autonomous_dev_agent rollback`
 - `autonomous-dev-agent`
 
 ## Notes
 
-The project is intentionally structured to keep the repository analysis layer separate from the future agent execution layer. That makes it easier to add new repository providers, embedding backends, and edit strategies later.
+The project is intentionally structured to keep the repository analysis layer separate from the orchestration layer and the future agent execution layer. That makes it easier to add new repository providers, embedding backends, edit strategies, checkpointing, and persistence backends later while keeping each module independent.
+
+The autonomous orchestrator now saves checkpoints after each major stage, prepares a temporary Git branch before edits when the repository is a real Git checkout, and can roll back to the original branch and commit state through the `rollback` command.

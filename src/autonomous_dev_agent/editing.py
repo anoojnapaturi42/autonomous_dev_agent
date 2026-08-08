@@ -68,6 +68,20 @@ class EditPreview:
             "diff": self.diff,
         }
 
+    @classmethod
+    def from_dict(cls, payload: dict[str, object]) -> "EditPreview":
+        return cls(
+            path=Path(str(payload.get("path", ""))),
+            strategy=str(payload.get("strategy", "unknown")),
+            start_line=payload.get("start_line"),
+            end_line=payload.get("end_line"),
+            original_text="",
+            updated_text="",
+            diff=str(payload.get("diff", "")),
+            symbol_name=payload.get("symbol_name") if payload.get("symbol_name") is None else str(payload.get("symbol_name")),
+            qualified_name=payload.get("qualified_name") if payload.get("qualified_name") is None else str(payload.get("qualified_name")),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class EditResult:

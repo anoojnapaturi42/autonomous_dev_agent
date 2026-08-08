@@ -43,6 +43,20 @@ class TestCaseResult:
             "failure_type": self.failure_type,
         }
 
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> "TestCaseResult":
+        return cls(
+            nodeid=str(payload.get("nodeid", "unknown")),
+            outcome=str(payload.get("outcome", "unknown")),
+            file=payload.get("file") if payload.get("file") is None else str(payload.get("file")),
+            line=payload.get("line"),
+            duration=float(payload.get("duration", 0.0)),
+            classname=payload.get("classname") if payload.get("classname") is None else str(payload.get("classname")),
+            name=payload.get("name") if payload.get("name") is None else str(payload.get("name")),
+            message=payload.get("message") if payload.get("message") is None else str(payload.get("message")),
+            failure_type=payload.get("failure_type") if payload.get("failure_type") is None else str(payload.get("failure_type")),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class FailureAnalysis:
@@ -63,6 +77,16 @@ class FailureAnalysis:
             "detail": self.detail,
         }
 
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> "FailureAnalysis":
+        return cls(
+            test_name=str(payload.get("test_name", "")),
+            failure_type=str(payload.get("failure_type", "unknown")),
+            root_cause=str(payload.get("root_cause", "unknown")),
+            summary=str(payload.get("summary", "")),
+            detail=str(payload.get("detail", "")),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class FailureAnalysisResult:
@@ -76,6 +100,13 @@ class FailureAnalysisResult:
             "total_failures": self.total_failures,
             "failures": [failure.to_dict() for failure in self.failures],
         }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> "FailureAnalysisResult":
+        return cls(
+            total_failures=int(payload.get("total_failures", 0)),
+            failures=tuple(FailureAnalysis.from_dict(item) for item in payload.get("failures", ())),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,6 +132,18 @@ class FailureCauseSummary:
             "details": list(self.details),
         }
 
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> "FailureCauseSummary":
+        return cls(
+            root_cause=str(payload.get("root_cause", "unknown")),
+            summary=str(payload.get("summary", "")),
+            count=int(payload.get("count", 0)),
+            confidence=float(payload.get("confidence", 0.0)),
+            test_names=tuple(str(item) for item in payload.get("test_names", ())),
+            failure_types=tuple(str(item) for item in payload.get("failure_types", ())),
+            details=tuple(str(item) for item in payload.get("details", ())),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class FailureSummary:
@@ -116,6 +159,14 @@ class FailureSummary:
             "root_causes": [cause.to_dict() for cause in self.root_causes],
             "failures": [failure.to_dict() for failure in self.failures],
         }
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> "FailureSummary":
+        return cls(
+            total_failures=int(payload.get("total_failures", 0)),
+            root_causes=tuple(FailureCauseSummary.from_dict(item) for item in payload.get("root_causes", ())),
+            failures=tuple(FailureAnalysis.from_dict(item) for item in payload.get("failures", ())),
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -154,6 +205,21 @@ class TestRunResult:
 
     def to_json(self, *, indent: int = 2) -> str:
         return json.dumps(self.to_dict(), indent=indent, sort_keys=True)
+
+    @classmethod
+    def from_dict(cls, payload: dict[str, Any]) -> "TestRunResult":
+        return cls(
+            runner=str(payload.get("runner", "unknown")),
+            exit_code=int(payload.get("exit_code", 0)),
+            success=bool(payload.get("success", False)),
+            stdout=str(payload.get("stdout", "")),
+            stderr=str(payload.get("stderr", "")),
+            command=tuple(str(item) for item in payload.get("command", ())),
+            cwd=Path(str(payload.get("cwd", "."))),
+            cases=tuple(TestCaseResult.from_dict(item) for item in payload.get("cases", ())),
+            analysis=FailureAnalysisResult.from_dict(payload["analysis"]) if payload.get("analysis") else None,
+            failure_summary=FailureSummary.from_dict(payload["failure_summary"]) if payload.get("failure_summary") else None,
+        )
 
     def _summary_from_cases(self) -> dict[str, int] | None:
         if not self.cases:
