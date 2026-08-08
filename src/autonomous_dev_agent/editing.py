@@ -173,7 +173,12 @@ class SafeEditingEngine:
         if self._repository_index is None:
             raise ValueError("Symbol edits require a repository index.")
 
-        symbols = self._repository_index.symbol_index.find_in_file(edit.path)
+        path_candidates = [edit.path]
+        if not Path(edit.path).is_absolute():
+            path_candidates.append(self._repository.root / edit.path)
+        symbols: list[PythonSymbol] = []
+        for candidate in path_candidates:
+            symbols.extend(self._repository_index.symbol_index.find_in_file(candidate))
         candidates = [
             symbol
             for symbol in symbols

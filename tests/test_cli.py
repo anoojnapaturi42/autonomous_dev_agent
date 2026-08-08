@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
 import unittest
 from pathlib import Path
+from unittest.mock import Mock, patch
 
+from autonomous_dev_agent.cli import app as cli_app
 from autonomous_dev_agent.repository import LocalRepository
-from autonomous_dev_agent.tester import PytestTestRunner
+from autonomous_dev_agent.tester import PytestTestRunner, TestCaseResult, TestRunResult
+from typer.testing import CliRunner
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -43,18 +47,74 @@ class CLITestCase(unittest.TestCase):
         self.assertIn("agent logic is not implemented yet", result.stdout.lower())
 
     def test_test_command_runs_pytest_and_emits_structured_json(self) -> None:
-        result = self.run_cli("test")
-        self.assertEqual(result.returncode, 0, msg=result.stderr)
-        payload = json.loads(result.stdout)
+        if os.environ.get("AUTONOMOUS_DEV_AGENT_RUNNING_PYTEST") == "1":
+            fake_result = TestRunResult(
+                runner="pytest",
+                exit_code=0,
+                success=True,
+                stdout="",
+                stderr="",
+                command=(sys.executable, "-m", "pytest", "-q"),
+                cwd=REPO_ROOT,
+                cases=(
+                    TestCaseResult(
+                        nodeid="tests/test_sample.py::test_sample",
+                        outcome="passed",
+                        file="tests/test_sample.py",
+                        line=1,
+                        duration=0.01,
+                    ),
+                ),
+            )
+            with patch("autonomous_dev_agent.cli.PytestTestRunner.run", return_value=fake_result):
+                result = CliRunner().invoke(cli_app, ["test"])
+        else:
+            result = self.run_cli("test")
+        exit_code = result.returncode if hasattr(result, "returncode") else result.exit_code
+        stdout = result.stdout if hasattr(result, "stdout") else result.output
+        stderr = result.stderr if hasattr(result, "stderr") else ""
+        self.assertEqual(exit_code, 0, msg=stderr)
+        payload = json.loads(stdout)
         self.assertEqual(payload["runner"], "pytest")
         self.assertEqual(payload["exit_code"], 0)
         self.assertTrue(payload["success"])
         self.assertIn("summary", payload)
+        self.assertIn("cases", payload)
+        self.assertEqual(payload["cases"][0]["outcome"], "passed")
+
+    def test_autonomous_command_runs_and_returns_structured_json(self) -> None:
+        fake_result = Mock()
+        fake_result.to_dict.return_value = {
+            "objective": "Improve the repository based on failed tests",
+            "retry_limit": 0,
+            "succeeded": True,
+            "stop_reason": "tests_passed",
+            "attempts": [],
+            "final_test_result": {
+                "runner": "pytest",
+                "exit_code": 0,
+                "success": True,
+            },
+            "final_failure_summary": {
+                "total_failures": 0,
+                "root_causes": [],
+                "failures": [],
+            },
+        }
+        with patch("autonomous_dev_agent.cli.AutonomousEngineer.run", return_value=fake_result):
+            result = CliRunner().invoke(cli_app, ["autonomous", "--retry-limit", "0"])
+        self.assertEqual(result.exit_code, 0, msg=result.stderr)
+        payload = json.loads(result.output)
+        self.assertEqual(payload["retry_limit"], 0)
+        self.assertTrue(payload["succeeded"])
+        self.assertEqual(payload["stop_reason"], "tests_passed")
+        self.assertEqual(len(payload["attempts"]), 0)
+        self.assertIn("final_failure_summary", payload)
 
 
 class PytestRunnerTestCase(unittest.TestCase):
     def test_detects_pytest_and_returns_structured_results(self) -> None:
-        runner = PytestTestRunner(REPO_ROOT)
+        runner = PytestTestRunner(EVAL_REPOS_ROOT / "pytest_repo")
 
         self.assertEqual(runner.detect(), "pytest")
 
@@ -69,6 +129,7 @@ class PytestRunnerTestCase(unittest.TestCase):
         self.assertEqual(payload["runner"], "pytest")
         self.assertEqual(payload["exit_code"], 0)
         self.assertGreaterEqual(payload["summary"]["passed"], 1)
+        self.assertGreaterEqual(len(payload["cases"]), 1)
 
 
 class LocalRepositoryTestCase(unittest.TestCase):

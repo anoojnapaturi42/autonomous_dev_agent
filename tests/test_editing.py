@@ -18,8 +18,25 @@ class SafeEditingEngineTestCase(unittest.TestCase):
         root = EDITING_REPO
         sample_path = root / "sample.py"
         notes_path = root / "notes.txt"
-        sample_before = sample_path.read_text(encoding="utf-8")
-        notes_before = notes_path.read_text(encoding="utf-8")
+        sample_before = textwrap.dedent(
+            """
+            # leading comment
+            from __future__ import annotations
+
+            def helper() -> str:
+                return "helper"
+
+            @logged
+            def target(value: str) -> str:
+                \"\"\"Return a transformed value.\"\"\"
+                return value.strip()
+
+            # trailing comment
+            """
+        ).lstrip()
+        notes_before = "alpha\nbeta\n"
+        sample_path.write_text(sample_before, encoding="utf-8")
+        notes_path.write_text(notes_before, encoding="utf-8")
         self.addCleanup(sample_path.write_text, sample_before, encoding="utf-8")
         self.addCleanup(notes_path.write_text, notes_before, encoding="utf-8")
         repo = LocalRepository(root)
@@ -37,6 +54,7 @@ class SafeEditingEngineTestCase(unittest.TestCase):
                 SymbolEdit(
                     path=Path("sample.py"),
                     symbol_name="target",
+                    qualified_name="target",
                     replacement_text=textwrap.dedent(
                         """
                         @logged
@@ -63,6 +81,7 @@ class SafeEditingEngineTestCase(unittest.TestCase):
                 SymbolEdit(
                     path=Path("sample.py"),
                     symbol_name="target",
+                    qualified_name="target",
                     replacement_text=textwrap.dedent(
                         """
                         @logged

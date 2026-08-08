@@ -12,17 +12,19 @@ The project currently focuses on repository understanding and safe code modifica
 - semantic chunking and search
 - execution planning before edits
 - diff-first file editing with Git-style unified diffs
+- an autonomous edit-test-analyze-retry loop with configurable retry limits
 - Typer-based CLI entry point
 
 ## Status
 
-The agent logic itself is not implemented yet. The `agent` command is a placeholder, but the repository analysis and editing pipeline are in place.
+The repository analysis, planning, safe editing, and autonomous retry loop are in place. The `agent` command is still a placeholder, but the `test` and `autonomous` commands now expose the structured test execution and repair loop.
 
 ## Quickstart
 
 ```bash
 python -m autonomous_dev_agent --help
 python -m autonomous_dev_agent agent
+python -m autonomous_dev_agent autonomous
 ```
 
 If you install the package, the console script is also available:
@@ -156,6 +158,8 @@ The test suite covers:
 
 - `python -m autonomous_dev_agent`
 - `python -m autonomous_dev_agent agent`
+- `python -m autonomous_dev_agent autonomous`
+- `python -m autonomous_dev_agent test`
 - `autonomous-dev-agent`
 
 ## Notes

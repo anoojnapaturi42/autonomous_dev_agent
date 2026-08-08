@@ -1,6 +1,7 @@
 """Autonomous Dev Agent package."""
 
 from .config import Settings, load_settings
+from .autonomy import AutonomousAttempt, AutonomousEditContext, AutonomousEngineer, AutonomousRunResult
 from .logging_config import configure_logging
 from .ast_parser import AstPythonParser, ParsedPythonFile
 from .graphs import CallGraph, ModuleDependencyGraph
@@ -11,10 +12,15 @@ from .planning import ExecutionPlan, PlanStep, PlanningModule
 from .scanner import RepositoryScanner
 from .semantic import SemanticChunk, SemanticIndex, SemanticSearchResult
 from .symbol_index import PythonFileIndex, PythonImport, PythonSymbol, RepositoryIndex, SymbolIndex
-from .tester import PytestTestRunner, TestRunResult
+from .tester import PytestTestRunner, TestCaseResult, TestRunResult
+from .tester import FailureAnalysis, FailureAnalysisResult, FailureCauseSummary, FailureSummary
 
 __all__ = [
     "AstPythonParser",
+    "AutonomousAttempt",
+    "AutonomousEditContext",
+    "AutonomousEngineer",
+    "AutonomousRunResult",
     "CallGraph",
     "create_embedding_provider",
     "EmbeddingProvider",
@@ -23,6 +29,10 @@ __all__ = [
     "EditResult",
     "FileEdit",
     "ExecutionPlan",
+    "FailureAnalysis",
+    "FailureAnalysisResult",
+    "FailureCauseSummary",
+    "FailureSummary",
     "LocalRepository",
     "ModuleDependencyGraph",
     "PlanStep",
@@ -44,6 +54,7 @@ __all__ = [
     "SymbolEdit",
     "Settings",
     "PytestTestRunner",
+    "TestCaseResult",
     "TestRunResult",
     "configure_logging",
     "load_settings",
