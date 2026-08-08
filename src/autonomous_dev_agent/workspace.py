@@ -109,6 +109,47 @@ class GitWorkspaceManager:
         except OSError:
             pass
 
+    def push(self, *, branch: str, remote: str = "origin", token: str | None = None) -> bool:
+        """Push a local branch to the given remote, creating it upstream if needed.
+
+        Returns True on success, False if the repository has no such remote
+        configured or the push otherwise fails (the caller decides how to
+        surface that, since a failed push should not crash the agent).
+        """
+
+        if not self._is_git_repository():
+            return False
+        remote_url = self._remote_url(remote)
+        if remote_url is None:
+            return False
+
+        push_url = self._authenticated_remote_url(remote_url, token)
+        if push_url != remote_url:
+            # A token was embedded into the URL: push directly to that URL
+            # rather than the remote name, since git treats the remote name
+            # as authoritative over the token-bearing --set-upstream form.
+            args = ["push", push_url, branch]
+        else:
+            args = ["push", "--set-upstream", remote, branch]
+
+        result = self._run_git(*args, check=False)
+        return result.returncode == 0
+
+    def _remote_url(self, remote: str) -> str | None:
+        result = self._run_git("remote", "get-url", remote, check=False)
+        url = result.stdout.strip()
+        return url or None
+
+    def _authenticated_remote_url(self, remote_url: str, token: str | None) -> str:
+        if not token:
+            return remote_url
+        from urllib.parse import urlparse
+
+        parsed = urlparse(remote_url)
+        if parsed.scheme != "https" or parsed.netloc.lower() != "github.com":
+            return remote_url
+        return f"https://x-access-token:{token}@{parsed.netloc}{parsed.path}"
+
     def _is_git_repository(self) -> bool:
         return self._run_git("rev-parse", "--is-inside-work-tree", check=False).returncode == 0
 

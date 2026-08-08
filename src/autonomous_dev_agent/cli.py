@@ -10,6 +10,8 @@ from .autonomy import AutonomousEngineer
 from .cloning import GitRepositoryCloner
 from .config import Settings, load_settings
 from .fix_generation import AnthropicLanguageModelClient, LLMEditStrategy
+from .github_api import GitHubClient, parse_issue_reference
+from .issue_fix import IssueFixWorkflow
 from .memory import PersistentMemoryStore
 from .repository import LocalRepository
 from .logging_config import configure_logging
@@ -149,6 +151,68 @@ def rollback_command() -> None:
         typer.echo("Restored the original repository state.")
     else:
         typer.echo("No prepared Git workspace state was found to roll back.")
+
+
+@app.command("fix-issue")
+def fix_issue_command(
+    issue: str = typer.Argument(
+        ...,
+        help="A GitHub issue URL, e.g. https://github.com/owner/repo/issues/123.",
+    ),
+    retry_limit: int = typer.Option(
+        2, min=0, help="Maximum number of edit retries after the initial test run."
+    ),
+) -> None:
+    """Fetch a GitHub issue, attempt to fix it, and open a pull request on success.
+
+    Operates on the local repository checkout at the configured project root
+    (see `clone` to obtain one). Requires ANTHROPIC_API_KEY to generate fixes
+    and GITHUB_TOKEN with push/PR permissions on the target repository.
+    """
+
+    settings = load_settings()
+    parsed = parse_issue_reference(issue)
+    if parsed is None:
+        typer.echo(
+            f"Could not parse a GitHub issue reference from '{issue}'. "
+            "Expected a URL like https://github.com/owner/repo/issues/123.",
+            err=True,
+        )
+        raise typer.Exit(code=1)
+    owner, repository_name, issue_number = parsed
+
+    if not settings.anthropic_api_key:
+        typer.echo(
+            "Error: ANTHROPIC_API_KEY is required to generate fixes for an issue.", err=True
+        )
+        raise typer.Exit(code=1)
+    if not settings.github_token:
+        typer.echo(
+            "Warning: GITHUB_TOKEN is not set. Fetching the issue may be rate-limited and "
+            "pushing/opening a pull request will fail without it.",
+            err=True,
+        )
+
+    repository = LocalRepository(settings.project_root)
+    edit_strategy = LLMEditStrategy(
+        AnthropicLanguageModelClient(
+            api_key=settings.anthropic_api_key,
+            model=settings.llm_model,
+            max_output_tokens=settings.llm_max_output_tokens,
+        )
+    )
+    github_client = GitHubClient(token=settings.github_token)
+    workflow = IssueFixWorkflow(
+        repository,
+        github_client,
+        edit_strategy=edit_strategy,
+        retry_limit=retry_limit,
+        github_token=settings.github_token,
+    )
+    result = workflow.run(owner, repository_name, issue_number)
+    typer.echo(json.dumps(result.to_dict(), indent=2, sort_keys=True))
+    if result.pull_request is None:
+        raise typer.Exit(code=1)
 
 
 def main() -> None:

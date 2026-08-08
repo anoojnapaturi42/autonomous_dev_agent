@@ -125,6 +125,77 @@ class CLITestCase(unittest.TestCase):
             result = CliRunner().invoke(cli_app, ["test", "--sandbox"])
         self.assertNotEqual(result.exit_code, 0)
 
+    def test_fix_issue_command_rejects_unparseable_issue_reference(self) -> None:
+        with patch.dict(os.environ, {"ANTHROPIC_API_KEY": "key", "GITHUB_TOKEN": "tok"}):
+            result = CliRunner().invoke(cli_app, ["fix-issue", "not-a-valid-issue-reference"])
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("Could not parse", result.output)
+
+    def test_fix_issue_command_requires_anthropic_api_key(self) -> None:
+        env = dict(os.environ)
+        env.pop("ANTHROPIC_API_KEY", None)
+        env["GITHUB_TOKEN"] = "tok"
+        with patch.dict(os.environ, env, clear=True):
+            result = CliRunner().invoke(
+                cli_app, ["fix-issue", "https://github.com/octocat/Hello-World/issues/1"]
+            )
+        self.assertNotEqual(result.exit_code, 0)
+        self.assertIn("ANTHROPIC_API_KEY", result.output)
+
+    def test_fix_issue_command_reports_result_json_on_success(self) -> None:
+        from datetime import datetime, timezone as tz
+        from autonomous_dev_agent.github_api import GitHubIssue, PullRequestResult
+        from autonomous_dev_agent.issue_fix import IssueFixResult
+        from autonomous_dev_agent.orchestrator import AutonomousRunResult
+        from autonomous_dev_agent.tester import FailureSummary
+
+        fake_result = IssueFixResult(
+            issue=GitHubIssue(
+                owner="octocat",
+                repository="Hello-World",
+                number=1,
+                title="Bug",
+                body="Details",
+                html_url="https://github.com/octocat/Hello-World/issues/1",
+                labels=(),
+            ),
+            run_result=AutonomousRunResult(
+                objective="Fix issue #1",
+                retry_limit=2,
+                succeeded=True,
+                stop_reason="tests_passed",
+                attempts=(),
+                final_test_result=TestRunResult(
+                    runner="pytest",
+                    exit_code=0,
+                    success=True,
+                    stdout="",
+                    stderr="",
+                    command=(),
+                    cwd=REPO_ROOT,
+                ),
+                final_failure_summary=FailureSummary(total_failures=0, root_causes=(), failures=()),
+            ),
+            pull_request=PullRequestResult(number=5, html_url="https://github.com/o/r/pull/5", title="Fix #1"),
+            pushed=True,
+            message="Pull request opened.",
+        )
+        with patch("autonomous_dev_agent.cli.IssueFixWorkflow.run", return_value=fake_result):
+            with patch.dict(
+                os.environ,
+                {
+                    "ANTHROPIC_API_KEY": "key",
+                    "GITHUB_TOKEN": "tok",
+                    "AUTONOMOUS_DEV_AGENT_ROOT": str(EVAL_REPOS_ROOT / "toy"),
+                },
+            ):
+                result = CliRunner().invoke(
+                    cli_app, ["fix-issue", "https://github.com/octocat/Hello-World/issues/1"]
+                )
+        self.assertEqual(result.exit_code, 0, msg=result.output)
+        payload = json.loads(result.output)
+        self.assertEqual(payload["pull_request"]["number"], 5)
+
     def test_autonomous_command_runs_and_returns_structured_json(self) -> None:
         fake_result = Mock()
         fake_result.to_dict.return_value = {
