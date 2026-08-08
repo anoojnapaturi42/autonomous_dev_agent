@@ -5,15 +5,14 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
-import subprocess
-import sys
 import xml.etree.ElementTree as ET
-import tempfile
 from uuid import uuid4
 from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from .sandbox import CommandExecutor, LocalCommandExecutor
 
 
 @dataclass(frozen=True, slots=True)
@@ -259,8 +258,14 @@ class TestRunResult:
 class PytestTestRunner:
     """Detect pytest availability and run repository tests."""
 
-    def __init__(self, repository_root: str | os.PathLike[str] | Path) -> None:
+    def __init__(
+        self,
+        repository_root: str | os.PathLike[str] | Path,
+        *,
+        executor: CommandExecutor | None = None,
+    ) -> None:
         self._repository_root = Path(repository_root).resolve()
+        self._executor = executor or LocalCommandExecutor()
 
     def detect(self) -> str:
         if not self._pytest_is_available():
@@ -284,23 +289,25 @@ class PytestTestRunner:
                 failure_summary=None,
             )
 
-        report_path = Path(tempfile.gettempdir()) / f"autonomous-dev-agent-pytest-{uuid4().hex}.xml"
+        # The report file must live inside the repository root (not the host
+        # temp dir) so it is visible on the host after a sandboxed/Docker
+        # run, where only the mounted repository directory is shared back.
+        report_dir = self._repository_root / ".autonomous_dev_agent" / "tmp"
+        report_dir.mkdir(parents=True, exist_ok=True)
+        report_path = report_dir / f"pytest-report-{uuid4().hex}.xml"
         command = [
-            sys.executable,
+            self._executor.python_executable,
             "-m",
             "pytest",
             "-q",
-            f"--junitxml={report_path}",
+            f"--junitxml={report_path.relative_to(self._repository_root)}",
         ]
         if (self._repository_root / "eval_repos").exists():
             command.append("--ignore=eval_repos")
-        completed = subprocess.run(
+        completed = self._executor.run(
             command,
             cwd=self._repository_root,
-            capture_output=True,
-            text=True,
-            check=False,
-            env={**os.environ, "AUTONOMOUS_DEV_AGENT_RUNNING_PYTEST": "1"},
+            env={"AUTONOMOUS_DEV_AGENT_RUNNING_PYTEST": "1"},
         )
         cases = self._load_cases_from_junitxml(report_path)
         try:

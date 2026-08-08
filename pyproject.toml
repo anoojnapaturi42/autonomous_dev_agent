@@ -16,6 +16,9 @@ dependencies = [
 dev = [
     "pytest>=8,<9",
 ]
+llm = [
+    "anthropic>=0.40,<1.0",
+]
 
 [project.scripts]
 autonomous-dev-agent = "autonomous_dev_agent.cli:main"
@@ -25,4 +28,5 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
 

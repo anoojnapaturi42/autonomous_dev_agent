@@ -76,8 +76,9 @@ class GitHubRepositoryReference:
 class GitRepositoryCloner:
     """Clone a Git repository into a local workspace."""
 
-    def __init__(self, *, git_executable: str = "git") -> None:
+    def __init__(self, *, git_executable: str = "git", github_token: str | None = None) -> None:
         self._git_executable = git_executable
+        self._github_token = github_token
 
     def clone(
         self,
@@ -86,18 +87,24 @@ class GitRepositoryCloner:
         *,
         branch: str | None = None,
         depth: int | None = 1,
+        token: str | None = None,
     ) -> CloneResult:
         source_url, repository_name, source_label = self._normalize_source(source)
         destination_path = self._resolve_destination(destination, repository_name)
         destination_path.parent.mkdir(parents=True, exist_ok=True)
+
+        auth_token = token if token is not None else self._github_token
+        fetch_url = self._authenticated_url(source_url, auth_token)
 
         command = [self._git_executable, "clone"]
         if depth is not None and depth > 0:
             command.extend(["--depth", str(depth)])
         if branch:
             command.extend(["--branch", branch])
-        command.extend([source_url, str(destination_path)])
+        command.extend([fetch_url, str(destination_path)])
 
+        # source_url (without embedded credentials) is used for the stored
+        # result so tokens never end up in memory files or logs.
         subprocess.run(command, capture_output=True, text=True, check=True)
         return CloneResult(
             source=source_label,
@@ -114,9 +121,24 @@ class GitRepositoryCloner:
         *,
         branch: str | None = None,
         depth: int | None = 1,
+        token: str | None = None,
     ) -> LocalRepository:
-        result = self.clone(source, destination, branch=branch, depth=depth)
+        result = self.clone(source, destination, branch=branch, depth=depth, token=token)
         return LocalRepository(result.destination)
+
+    def _authenticated_url(self, source_url: str, token: str | None) -> str:
+        """Embed a token into an https GitHub URL for private-repo access.
+
+        Only applies to https://github.com URLs; local paths and SSH URLs
+        are returned unchanged since they use their own auth mechanisms.
+        """
+
+        if not token:
+            return source_url
+        parsed = urlparse(source_url)
+        if parsed.scheme != "https" or parsed.netloc.lower() != "github.com":
+            return source_url
+        return f"https://x-access-token:{token}@{parsed.netloc}{parsed.path}"
 
     def _normalize_source(
         self,

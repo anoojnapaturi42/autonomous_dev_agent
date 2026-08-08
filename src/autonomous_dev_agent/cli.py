@@ -7,10 +7,13 @@ import json
 import typer
 
 from .autonomy import AutonomousEngineer
+from .cloning import GitRepositoryCloner
 from .config import Settings, load_settings
+from .fix_generation import AnthropicLanguageModelClient, LLMEditStrategy
 from .memory import PersistentMemoryStore
 from .repository import LocalRepository
 from .logging_config import configure_logging
+from .sandbox import DockerSandboxRunner, DockerNotAvailableError
 from .tester import PytestTestRunner
 
 app = typer.Typer(
@@ -43,11 +46,50 @@ def agent_command(ctx: typer.Context) -> None:
     typer.echo("Agent logic is not implemented yet.")
 
 
+@app.command("clone")
+def clone_command(
+    source: str = typer.Argument(
+        ..., help="A GitHub URL, owner/repo shorthand, SSH URL, or local path to clone."
+    ),
+    destination: str = typer.Option(
+        None, help="Destination directory. Defaults to ./clones/<repo-name>-<id>."
+    ),
+    branch: str = typer.Option(None, help="Branch to check out instead of the default."),
+) -> None:
+    """Clone a repository (including private GitHub repos via GITHUB_TOKEN) and print its location."""
+
+    settings = load_settings()
+    cloner = GitRepositoryCloner(github_token=settings.github_token)
+    result = cloner.clone(source, destination, branch=branch)
+    typer.echo(json.dumps(result.to_dict(), indent=2, sort_keys=True))
+
+
 @app.command("test")
-def test_command() -> None:
+def test_command(
+    sandbox: bool = typer.Option(
+        False,
+        "--sandbox/--no-sandbox",
+        help="Run the test suite inside an isolated Docker container instead of on the host.",
+    ),
+) -> None:
     """Detect pytest and run the repository test suite, returning structured JSON."""
 
-    runner = PytestTestRunner(load_settings().project_root)
+    settings = load_settings()
+    executor = None
+    if sandbox:
+        sandbox_runner = DockerSandboxRunner(
+            image=settings.sandbox_image,
+            memory_limit=settings.sandbox_memory_limit,
+            cpu_limit=settings.sandbox_cpu_limit,
+        )
+        if not sandbox_runner.is_available():
+            raise DockerNotAvailableError(
+                "Docker is not available. Install Docker and ensure the daemon is running, "
+                "or omit --sandbox to run tests on the host."
+            )
+        executor = sandbox_runner
+
+    runner = PytestTestRunner(settings.project_root, executor=executor)
     result = runner.run()
     typer.echo(result.to_json())
 
@@ -68,9 +110,25 @@ def autonomous_command(
 
     settings = load_settings()
     repository = LocalRepository(settings.project_root)
+    edit_strategy = None
+    if settings.anthropic_api_key:
+        edit_strategy = LLMEditStrategy(
+            AnthropicLanguageModelClient(
+                api_key=settings.anthropic_api_key,
+                model=settings.llm_model,
+                max_output_tokens=settings.llm_max_output_tokens,
+            )
+        )
+    else:
+        typer.echo(
+            "Warning: ANTHROPIC_API_KEY is not set, so no edit strategy is available. "
+            "The loop will run once, report failures, and stop.",
+            err=True,
+        )
     engineer = AutonomousEngineer(
         repository,
         retry_limit=retry_limit,
+        edit_strategy=edit_strategy,
         memory_store=PersistentMemoryStore(settings.memory_path),
     )
     result = engineer.run(objective, retry_limit=retry_limit)

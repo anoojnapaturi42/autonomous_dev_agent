@@ -9,9 +9,11 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from autonomous_dev_agent.cli import app as cli_app
+from autonomous_dev_agent.cloning import CloneResult
 from autonomous_dev_agent.repository import LocalRepository
 from autonomous_dev_agent.tester import PytestTestRunner, TestCaseResult, TestRunResult
 from typer.testing import CliRunner
+from datetime import datetime, timezone
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -81,6 +83,47 @@ class CLITestCase(unittest.TestCase):
         self.assertIn("summary", payload)
         self.assertIn("cases", payload)
         self.assertEqual(payload["cases"][0]["outcome"], "passed")
+
+    def test_clone_command_returns_structured_json(self) -> None:
+        fake_result = CloneResult(
+            source="github:octocat/Hello-World",
+            source_url="https://github.com/octocat/Hello-World.git",
+            destination=Path("/tmp/hello-world"),
+            repository_name="Hello-World",
+            cloned_at=datetime.now(timezone.utc),
+        )
+        with patch("autonomous_dev_agent.cli.GitRepositoryCloner.clone", return_value=fake_result):
+            result = CliRunner().invoke(cli_app, ["clone", "octocat/Hello-World"])
+        self.assertEqual(result.exit_code, 0, msg=result.stderr)
+        payload = json.loads(result.output)
+        self.assertEqual(payload["repository_name"], "Hello-World")
+        self.assertEqual(payload["source_url"], "https://github.com/octocat/Hello-World.git")
+
+    def test_test_command_with_sandbox_uses_docker_executor_when_available(self) -> None:
+        fake_result = TestRunResult(
+            runner="pytest",
+            exit_code=0,
+            success=True,
+            stdout="",
+            stderr="",
+            command=("python", "-m", "pytest", "-q"),
+            cwd=REPO_ROOT,
+            cases=(),
+        )
+        with patch("autonomous_dev_agent.cli.DockerSandboxRunner.is_available", return_value=True):
+            with patch(
+                "autonomous_dev_agent.cli.PytestTestRunner.run", return_value=fake_result
+            ) as mock_run:
+                result = CliRunner().invoke(cli_app, ["test", "--sandbox"])
+        self.assertEqual(result.exit_code, 0, msg=result.stderr)
+        mock_run.assert_called_once()
+        payload = json.loads(result.output)
+        self.assertTrue(payload["success"])
+
+    def test_test_command_with_sandbox_fails_clearly_when_docker_unavailable(self) -> None:
+        with patch("autonomous_dev_agent.cli.DockerSandboxRunner.is_available", return_value=False):
+            result = CliRunner().invoke(cli_app, ["test", "--sandbox"])
+        self.assertNotEqual(result.exit_code, 0)
 
     def test_autonomous_command_runs_and_returns_structured_json(self) -> None:
         fake_result = Mock()

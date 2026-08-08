@@ -13,6 +13,9 @@ The project currently focuses on repository understanding and safe code modifica
 - execution planning before edits
 - diff-first file editing with Git-style unified diffs
 - an autonomous edit-test-analyze-retry loop with configurable retry limits
+- an LLM-backed edit strategy (Anthropic API) that proposes real code fixes for failing tests
+- GitHub repository cloning, including private repos via a `GITHUB_TOKEN`
+- optional Docker-sandboxed test execution
 - Typer-based CLI entry point
 
 ## Status
@@ -140,6 +143,10 @@ Settings are loaded from environment variables:
 - `AUTONOMOUS_DEV_AGENT_MEMORY_PATH`
 - `AUTONOMOUS_DEV_AGENT_EMBEDDING_PROVIDER`
 - `AUTONOMOUS_DEV_AGENT_EMBEDDING_DIMENSION`
+- `GITHUB_TOKEN` (optional, enables cloning private GitHub repositories)
+- `AUTONOMOUS_DEV_AGENT_SANDBOX_ENABLED`, `AUTONOMOUS_DEV_AGENT_SANDBOX_IMAGE`, `AUTONOMOUS_DEV_AGENT_SANDBOX_MEMORY`, `AUTONOMOUS_DEV_AGENT_SANDBOX_CPUS`, `AUTONOMOUS_DEV_AGENT_SANDBOX_TIMEOUT`
+- `ANTHROPIC_API_KEY` (optional, enables the LLM-backed edit strategy for `autonomous`)
+- `AUTONOMOUS_DEV_AGENT_LLM_MODEL`, `AUTONOMOUS_DEV_AGENT_LLM_MAX_TOKENS`
 
 Defaults are chosen so the project works locally without extra setup.
 

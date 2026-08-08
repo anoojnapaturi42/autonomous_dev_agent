@@ -20,6 +20,15 @@ class Settings:
     project_root: Path
     memory_path: Path
     debug: bool
+    github_token: str | None
+    sandbox_enabled: bool
+    sandbox_image: str
+    sandbox_memory_limit: str
+    sandbox_cpu_limit: str
+    sandbox_timeout_seconds: int
+    anthropic_api_key: str | None
+    llm_model: str
+    llm_max_output_tokens: int
 
 
 def _get_bool(value: str | None, default: bool = False) -> bool:
@@ -50,6 +59,15 @@ def load_settings(
             base=root,
         ),
         debug=_get_bool(env.get("AUTONOMOUS_DEV_AGENT_DEBUG")),
+        github_token=env.get("GITHUB_TOKEN") or None,
+        sandbox_enabled=_get_bool(env.get("AUTONOMOUS_DEV_AGENT_SANDBOX_ENABLED")),
+        sandbox_image=env.get("AUTONOMOUS_DEV_AGENT_SANDBOX_IMAGE", "python:3.11-slim"),
+        sandbox_memory_limit=env.get("AUTONOMOUS_DEV_AGENT_SANDBOX_MEMORY", "512m"),
+        sandbox_cpu_limit=env.get("AUTONOMOUS_DEV_AGENT_SANDBOX_CPUS", "1"),
+        sandbox_timeout_seconds=int(env.get("AUTONOMOUS_DEV_AGENT_SANDBOX_TIMEOUT", "300")),
+        anthropic_api_key=env.get("ANTHROPIC_API_KEY") or None,
+        llm_model=env.get("AUTONOMOUS_DEV_AGENT_LLM_MODEL", "claude-sonnet-4-6"),
+        llm_max_output_tokens=int(env.get("AUTONOMOUS_DEV_AGENT_LLM_MAX_TOKENS", "8000")),
     )
 
 
